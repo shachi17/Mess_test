@@ -55,6 +55,10 @@ function App() {
   }
 
   function handleMeal(meal) {
+    if (!studentName.trim()) {
+  showToast("Please enter your name first.");
+  return;
+}
     const existing = records.find((record) => record.meal === meal);
 
     if (existing) {
@@ -67,17 +71,42 @@ function App() {
         current.filter((record) => record.meal !== meal)
       );
       showToast(meal + " registration cancelled.");
-    } else {
-      const newRecord = {
-        meal,
-        passId: makePassId(),
-        status: "registered",
-        createdAt: new Date().toISOString(),
-      };
+    }  else {
+  const newRecord = {
+    meal,
+    passId: makePassId(),
+    status: "registered",
+    createdAt: new Date().toISOString(),
+  };
 
-      setRecords((current) => [...current, newRecord]);
-      showToast(meal + " registered successfully!");
-    }
+  setRecords((current) => [...current, newRecord]);
+  showToast(meal + " registered successfully!");
+
+  fetch("http://localhost:3000/api/registrations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      studentName: studentName.trim(),
+      meal,
+      optedIn: true,
+    }),
+  })
+    .then(async (response) => {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed.");
+      }
+
+      showToast(meal + " saved to backend!");
+    })
+    .catch((error) => {
+      console.error("Backend registration error:", error);
+      showToast("Backend save failed. Check connection.");
+    });
+}
   }
 
   function verifyPass() {
@@ -211,7 +240,19 @@ function App() {
               </div>
               <span className="status">Demo mode</span>
             </div>
+            
+            <div className="student-name-field">
+            <label htmlFor="studentName">Your full name</label>
+            <input
+           id="studentName"
+          type="text"
+           placeholder="Enter your full name"
+          value={studentName}
+          onChange={(e) => setStudentName(e.target.value)}
+      />
+      </div>
 
+            
             {[
               {
                 name: "Breakfast",
