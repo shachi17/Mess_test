@@ -1,0 +1,9 @@
+
+POST http://localhost:3000/api/registrations
+Content-Type: application/json
+
+{
+  "studentName": "Test Student",
+  "meal": "lunch",
+  "optedIn": true
+}

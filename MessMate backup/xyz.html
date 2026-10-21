@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MessMate | Smart Mess Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="brand-icon">M</span>
+      <span>MessMate<small>SMART MESS MANAGEMENT</small></span>
+    </a>
+    <span class="demo-label">DAY 1 PROTOTYPE</span>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">YOUR CAMPUS. YOUR MEALS.</p>
+      <h1>Good food starts<br>with a <span>better system.</span></h1>
+      <p>Register for meals, verify passes and help your mess plan smarter.</p>
+    </section>
+
+    <nav class="tabs" aria-label="MessMate pages">
+      <button class="tab active" data-page="student">Student</button>
+      <button class="tab" data-page="worker">Mess Worker</button>
+      <button class="tab" data-page="admin">Admin</button>
+    </nav>
+
+    <section id="student" class="page">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">STUDENT PORTAL</p>
+          <h2>Today's meals</h2>
+        </div>
+        <span class="status">Demo mode</span>
+      </div>
+
+      <div class="meal-card">
+        <div class="meal-icon">☀</div>
+        <div class="meal-info">
+          <h3>Breakfast</h3>
+          <p>8:00 AM – 9:30 AM</p>
+          <span class="meal-menu">Poha · Fruit · Tea</span>
+        </div>
+        <button class="register-btn" data-meal="Breakfast">Register</button>
+      </div>
+
+      <div class="meal-card">
+        <div class="meal-icon">◉</div>
+        <div class="meal-info">
+          <h3>Lunch</h3>
+          <p>12:30 PM – 2:00 PM</p>
+          <span class="meal-menu">Roti · Dal · Rice · Sabzi</span>
+        </div>
+        <button class="register-btn" data-meal="Lunch">Register</button>
+      </div>
+
+      <div class="meal-card">
+        <div class="meal-icon">☾</div>
+        <div class="meal-info">
+          <h3>Dinner</h3>
+          <p>7:30 PM – 9:00 PM</p>
+          <span class="meal-menu">Roti · Paneer · Rice</span>
+        </div>
+        <button class="register-btn" data-meal="Dinner">Register</button>
+      </div>
+
+      <div class="panel">
+        <h3>Your meal passes</h3>
+        <p class="muted">Register for a meal to generate its demo pass.</p>
+        <div id="my-passes" class="pass-list"></div>
+      </div>
+    </section>
+
+    <section id="worker" class="page hidden">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">WORKER PORTAL</p>
+          <h2>Verify a meal pass</h2>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p>Enter a student's pass ID to test the verification flow.</p>
+        <label for="pass-input">Pass ID</label>
+        <input id="pass-input" placeholder="Example: MM-A1B2C3">
+        <button id="verify-btn" class="primary-btn">Verify pass</button>
+        <div id="verification-result" class="result" aria-live="polite">
+          Waiting for a pass ID…
+        </div>
+        <button id="serve-btn" class="primary-btn hidden">Confirm meal served</button>
+      </div>
+      <p class="notice">Demo only: real QR scanning, server-side validation and worker login are not implemented yet.</p>
+    </section>
+
+    <section id="admin" class="page hidden">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ADMIN PORTAL</p>
+          <h2>Mess overview</h2>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <p>Registrations</p>
+          <strong id="registered-count">0</strong>
+        </div>
+        <div class="stat-card">
+          <p>Meals served</p>
+          <strong id="served-count">0</strong>
+        </div>
+        <div class="stat-card">
+          <p>Not yet served</p>
+          <strong id="pending-count">0</strong>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Meal registration records</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Meal</th><th>Pass ID</th><th>Status</th></tr>
+            </thead>
+            <tbody id="records-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>MessMate · Smarter meals, less waste.</p>
+      <p>Student project prototype · Sample data only</p>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="script.js"></script>
+</body>
+</html>
