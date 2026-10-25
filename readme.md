@@ -185,59 +185,7 @@ MessMate/
 
 *This is a representative structure; additional files and folders may exist in the repository.*
 
-## 10. Running the Project Locally
-
-### Prerequisites
-
-- Node.js and npm installed.
-- The project repository cloned or downloaded.
-- Dependencies installed in both the frontend and backend directories.
-
-### Start the backend
-
-Open a terminal in the project directory and run:
-
-```bash
-cd backend
-npm install
-node server.js
-```
-
-The backend should start on `http://localhost:3000` if configured to use port 3000.
-
-### Start the frontend
-
-Open a second terminal and run:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open the local URL printed by Vite in the terminal, typically `http://localhost:5173`.
-
-Keep both terminals running while testing frontend-backend communication.
-
-**Note:** The current backend may use in-memory storage. If so, registration records will not persist after the server restarts. PostgreSQL setup is part of the planned implementation.
-
-## 11. Testing
-
-The prototype has been tested for basic interface interactions and registration flows. Further testing is required before the complete system can be considered reliable.
-
-Planned testing includes:
-
-- Valid and invalid meal registration requests.
-- Registration cutoff enforcement.
-- Invalid, expired, and meal-mismatched QR passes.
-- Duplicate scans and simultaneous redemption attempts.
-- Refreshes and network interruptions before and after meal confirmation.
-- Role-based access restrictions.
-- Attendance consistency and audit-log correctness.
-- Database persistence and recovery.
-- Responsive behaviour across supported devices.
-
-## 12. Future Scope
+## 10. Future Scope
 
 - Complete PostgreSQL integration and database migrations.
 - Implement secure authentication and role-based access control.
@@ -247,9 +195,8 @@ Planned testing includes:
 - Improve food-demand forecasting using historical meal registrations and attendance.
 - Add automated tests, deployment monitoring, backups, and recovery procedures.
 
-The initial implementation will remain a modular application rather than introducing unnecessary microservice complexity. Further scaling and deployment improvements can be introduced when actual requirements justify them.
 
-## 13. Team
+## 11. Team
 
 **Team Name:** POWER UPS  
 **Team ID:** 311  
