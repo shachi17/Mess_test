@@ -53,13 +53,6 @@ College mess operations can struggle to estimate meal demand, confirm eligibilit
 * Audit trail for successful redemptions, rejected attempts, and authorised corrections.
 * Responsive layout for mobile, tablet, and desktop.
 
-#### 5.2 Out of scope for the initial MVP
-* Native Android/iOS applications.
-* Payment processing, wallet features, or billing.
-* Predictive AI/ML models; initial food-demand estimation can use transparent counts and comparisons.
-* Microservices or complex distributed infrastructure before a measured need exists.
-* Claims of high availability or horizontal scaling unless the chosen deployment actually supports and tests them.
-
 ### 6. Core user journeys
 
 #### 6.1 Student meal registration
