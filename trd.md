@@ -7,7 +7,6 @@ Version: 1.0
 Date: 21 October 2026
 Status: Technical plan; implementation status must be verified against the current repository.
 This TRD translates the MessMate product requirements and submitted WEBSTER proposal into a practical technical design. It is not a claim that every described feature is already implemented. Preserve and reuse the existing working HTML/CSS/JavaScript prototype wherever practical; do not rebuild working functionality without first checking the repository and Git history.
-
 1. Purpose and scope
 MessMate is a web-based college mess management system for meal registration, QR pass verification, confirmed attendance, auditability, and food-demand estimation.
 
@@ -41,28 +40,44 @@ Frontend tooling	Existing Vite setup, if already configured	Local React developm
 API testing	REST Client extension or equivalent	Exercise API endpoints during development
 Version control	Git and GitHub	Track changes and preserve working versions
 
-
 Database constraint: use PostgreSQL as required by the submitted proposal. Do not substitute SQLite or in-memory arrays for persistent application data. In-memory data may be used only for a temporary API smoke test.
 3. Architecture
 MessMate follows a three-tier architecture:
+
 ┌───────────────────────────────────────────────┐
+
 │ Client tier — React.js                        │
+
 │ Student portal | Worker portal | Admin portal │
+
 │ QR display | Camera-based QR scanner          │
+
 └───────────────────────┬───────────────────────┘
                         │ HTTPS / JSON REST API
+
 ┌───────────────────────▼───────────────────────┐
+
 │ Application tier — Node.js + Express.js       │
+
 │ Authentication and role authorization         │
+
 │ Zod validation and business rules             │
+
 │ Cutoff/pass validation and redemption logic   │
+
 │ Reporting and audit-event creation            │
+
 └───────────────────────┬───────────────────────┘
                         │ SQL via connection pool
+
 ┌───────────────────────▼───────────────────────┐
+
 │ Data tier — PostgreSQL                        │
+
 │ Users, schedules, registrations, passes,       │
+
 │ attendance/redemptions, audit events           │
+
 └───────────────────────────────────────────────┘
 3.1 Client tier
 - Keep the existing interface and working interactions where possible.
@@ -92,29 +107,53 @@ The project has had a working plain HTML/CSS/JavaScript prototype and a React/Vi
 6. Make small commits after a working milestone and test after each change.
 Suggested layout (adapt to the actual repository rather than forcing a restructure):
 MessMate/
+
 ├── frontend/
+
 │   ├── src/
+
 │   │   ├── components/
+
 │   │   ├── pages/          # or portal views
+
 │   │   ├── services/       # API client
+
 │   │   ├── App.jsx
+
 │   │   └── main.jsx
+
 │   ├── package.json
+
 │   └── .env.example
+
 ├── backend/
+
 │   ├── src/
+
 │   │   ├── routes/
+
 │   │   ├── middleware/
+
 │   │   ├── services/
+
 │   │   ├── db/
+
 │   │   ├── validators/
+
 │   │   └── app.js
+
 │   ├── server.js
+
 │   ├── package.json
+
 │   └── .env.example
+
 ├── database/
+
 │   └── migrations/
+
 ├── .gitignore
+
 └── README.md
 This is a suggested target structure, not a requirement to move files immediately. Preserve current filenames until a deliberate, tested refactor is needed.
 5. Environment and configuration
@@ -144,7 +183,6 @@ role	student, worker, or admin
 is_active	Whether the account can sign in
 created_at, updated_at	Timestamps
 
-
 Constraints: unique login identifier; valid role; required password hash.
 6.2 meal_schedules
 Column	Purpose
@@ -156,7 +194,6 @@ valid_from, valid_until	Pass validity window
 planned_quantity	Planned meal quantity, if configured
 created_at, updated_at	Timestamps
 
-
 Store and compare times consistently. Define the deployment timezone and cutoff policy explicitly; do not trust a browser clock to enforce cutoff rules.
 6.3 registrations
 Column	Purpose
@@ -165,7 +202,6 @@ student_id	Foreign key to users.id
 meal_schedule_id	Foreign key to meal_schedules.id
 opted_in	Current registration choice
 registered_at, updated_at	Timestamps
-
 
 Constraint: one registration per student per meal schedule, enforced by a unique constraint on (student_id, meal_schedule_id). Registration changes must be rejected by the backend after the cutoff.
 6.4 passes
@@ -179,7 +215,6 @@ redeemed_at	Nullable redemption timestamp
 redeemed_by	Worker user ID, nullable until redeemed
 created_at	Creation timestamp
 
-
 Constraints: unique public_id; unique pass per eligible registration as appropriate; foreign keys. Do not encode names, student numbers, passwords, or other sensitive information in the QR payload.
 6.5 attendance / redemptions
 Column	Purpose
@@ -190,7 +225,6 @@ student_id	Foreign key to the student
 worker_id	Worker who confirmed service
 confirmed_at	Confirmation timestamp
 operation_id	Stable idempotency/operation identifier where used
-
 
 Constraints: unique successful attendance per pass. The final schema may combine pass redemption and attendance if it preserves the required auditability and integrity.
 6.6 audit_events
@@ -205,7 +239,6 @@ reason_code	Safe machine-readable reason where relevant
 created_at	Event timestamp
 metadata	Limited, non-sensitive structured metadata where needed
 
-
 Do not log passwords, raw JWTs, database credentials, or unnecessary personal data.
 7. API design
 All API routes should return JSON and use appropriate HTTP status codes. Route names below are proposed contracts; they should be aligned with the existing backend before implementation rather than copied over blindly.
@@ -215,7 +248,6 @@ POST	/api/auth/login	Public	Authenticate and issue an access token
 GET	/api/auth/me	Authenticated	Return the current user's safe profile and role
 POST	/api/auth/logout	Authenticated / implementation-dependent	Clear client auth state and perform revocation if supported
 
-
 The account-provisioning approach (pre-created accounts, admin-created accounts, or another approved option) must be decided before implementing registration/login flows. Do not expose public admin account creation.
 7.2 Student and meal registration
 Method	Endpoint	Access	Purpose
@@ -224,13 +256,11 @@ GET	/api/registrations/me	Student	List the student's registrations
 PUT	/api/meals/:mealScheduleId/registration	Student	Create or update opt-in/opt-out before cutoff
 GET	/api/passes/me?mealScheduleId=...	Student	Retrieve eligible pass details for a meal
 
-
 The backend derives the student identity from the authenticated principal. It must not trust a client-supplied student ID to authorise access to another student's data.
 7.3 Worker verification and redemption
 Method	Endpoint	Access	Purpose
 POST	/api/passes/validate	Worker	Validate a scanned opaque pass ID without consuming it
 POST	/api/passes/:passId/confirm	Worker	Confirm meal service and atomically redeem the pass
-
 
 The validation response should clearly distinguish valid-and-awaiting-confirmation, invalid, expired, ineligible, wrong-meal, and already-redeemed states. Do not reveal sensitive student data to the worker beyond what is operationally necessary.
 
@@ -241,7 +271,6 @@ GET	/api/admin/summary	Admin	Summary totals for registrations and confirmed atte
 GET	/api/admin/meals/:mealScheduleId/stats	Admin	Planned, registered, and served counts for a meal
 GET	/api/admin/audit-events	Admin	Filtered audit event review
 POST / PATCH	Admin correction route, if approved	Admin with explicit permission	Record an authorised correction with an audit event
-
 
 Apply pagination and query limits to report/audit endpoints. Define the allowed correction workflow before exposing it.
 7.5 Common response/error conventions
@@ -401,8 +430,6 @@ Retry after a lost response duplicates attendance	Use idempotent confirmation an
 Camera access fails	Explain permission requirements, test supported devices, and provide clear error feedback.
 Secrets are committed	Use .env, .gitignore, and a placeholder .env.example.
 Scope is too large for available time	Prioritise reliable end-to-end flows and failure cases; avoid premature infrastructure complexity.
-
-
 16. Open technical decisions
 Resolve these before finalising implementation details:
 - How will accounts be provisioned initially?
