@@ -24,6 +24,7 @@ async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS registrations (
       id SERIAL PRIMARY KEY,
       student_name TEXT NOT NULL,
+      registration_number TEXT,
       meal TEXT NOT NULL,
       pass_id TEXT UNIQUE NOT NULL,
       opted_in BOOLEAN NOT NULL DEFAULT TRUE,
@@ -33,7 +34,25 @@ async function initializeDatabase() {
       served_at TIMESTAMPTZ
     )
   `);
+
+  // Safely update existing databases without deleting records.
+  await pool.query(`
+    ALTER TABLE registrations
+    ADD COLUMN IF NOT EXISTS registration_number TEXT
+  `);
 }
+
+const registrationFields = `
+  id,
+  student_name AS "studentName",
+  registration_number AS "registrationNumber",
+  meal,
+  pass_id AS "passId",
+  opted_in AS "optedIn",
+  status,
+  created_at AS "createdAt",
+  served_at AS "servedAt"
+`;
 
 app.get("/", (req, res) => {
   res.json({
@@ -42,30 +61,41 @@ app.get("/", (req, res) => {
   });
 });
 
+// Register a student for a meal.
 app.post("/api/registrations", async (req, res) => {
   try {
-    const { studentName, meal, passId, optedIn } = req.body;
+    const { studentName, registrationNumber, meal, passId, optedIn } =
+      req.body;
 
     if (
-      typeof studentName !== "string" || !studentName.trim() ||
-      typeof meal !== "string" || !meal.trim() ||
-      typeof passId !== "string" || !passId.trim() ||
+      typeof studentName !== "string" ||
+      !studentName.trim() ||
+      typeof registrationNumber !== "string" ||
+      !registrationNumber.trim() ||
+      typeof meal !== "string" ||
+      !meal.trim() ||
+      typeof passId !== "string" ||
+      !passId.trim() ||
       optedIn !== true
     ) {
       return res.status(400).json({
         success: false,
-        message: "Student name, meal, passId and optedIn: true are required.",
+        message:
+          "Name, registration number, meal and pass ID are required.",
       });
     }
 
     const result = await pool.query(
       `INSERT INTO registrations
-        (student_name, meal, pass_id, opted_in)
-       VALUES ($1, $2, $3, TRUE)
-       RETURNING id, student_name AS "studentName",
-         meal, pass_id AS "passId", opted_in AS "optedIn",
-         status, created_at AS "createdAt", served_at AS "servedAt"`,
-      [studentName.trim(), meal.trim(), passId.trim().toUpperCase()]
+        (student_name, registration_number, meal, pass_id, opted_in)
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING ${registrationFields}`,
+      [
+        studentName.trim(),
+        registrationNumber.trim().toUpperCase(),
+        meal.trim(),
+        passId.trim().toUpperCase(),
+      ]
     );
 
     res.status(201).json({
@@ -77,39 +107,82 @@ app.post("/api/registrations", async (req, res) => {
     if (error.code === "23505") {
       return res.status(409).json({
         success: false,
-        message: "This pass ID already exists.",
+        message: "This pass ID already exists. Please retry.",
       });
     }
+
     console.error(error);
-    res.status(500).json({ success: false, message: "Database error." });
+    res.status(500).json({
+      success: false,
+      message: "Database error.",
+    });
   }
 });
 
+// Load records for the dashboard and student portal.
 app.get("/api/registrations", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, student_name AS "studentName",
-        meal, pass_id AS "passId", opted_in AS "optedIn",
-        status, created_at AS "createdAt", served_at AS "servedAt"
+      SELECT ${registrationFields}
       FROM registrations
       ORDER BY id DESC
     `);
+
     res.json(result.rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Could not load registrations." });
+    res.status(500).json({
+      message: "Could not load registrations.",
+    });
   }
 });
 
+// Find active meal registrations for a college registration number.
+app.get(
+  "/api/registrations/by-registration/:registrationNumber",
+  async (req, res) => {
+    try {
+      const registrationNumber =
+        req.params.registrationNumber.trim().toUpperCase();
+
+      const result = await pool.query(
+        `SELECT ${registrationFields}
+         FROM registrations
+         WHERE UPPER(registration_number) = $1
+           AND opted_in = TRUE
+         ORDER BY id DESC`,
+        [registrationNumber]
+      );
+
+      if (!result.rows.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No active meal registrations found.",
+        });
+      }
+
+      res.json({
+        success: true,
+        registrations: result.rows,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "Registration lookup failed.",
+      });
+    }
+  }
+);
+
+// Verify a particular QR pass.
 app.get("/api/registrations/:passId", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, student_name AS "studentName",
-        meal, pass_id AS "passId", opted_in AS "optedIn",
-        status, created_at AS "createdAt", served_at AS "servedAt"
+      `SELECT ${registrationFields}
        FROM registrations
        WHERE pass_id = $1 AND opted_in = TRUE`,
-      [req.params.passId.toUpperCase()]
+      [req.params.passId.trim().toUpperCase()]
     );
 
     if (!result.rows.length) {
@@ -119,13 +192,19 @@ app.get("/api/registrations/:passId", async (req, res) => {
       });
     }
 
-    res.json({ success: true, registration: result.rows[0] });
+    res.json({
+      success: true,
+      registration: result.rows[0],
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Verification failed." });
+    res.status(500).json({
+      message: "Verification failed.",
+    });
   }
 });
 
+// Mark a meal served only once, after worker confirmation.
 app.patch("/api/registrations/:passId/serve", async (req, res) => {
   try {
     const result = await pool.query(
@@ -134,24 +213,28 @@ app.patch("/api/registrations/:passId/serve", async (req, res) => {
        WHERE pass_id = $1
          AND opted_in = TRUE
          AND status = 'registered'
-       RETURNING id, student_name AS "studentName",
-         meal, pass_id AS "passId", opted_in AS "optedIn",
-         status, created_at AS "createdAt", served_at AS "servedAt"`,
-      [req.params.passId.toUpperCase()]
+       RETURNING ${registrationFields}`,
+      [req.params.passId.trim().toUpperCase()]
     );
 
     if (!result.rows.length) {
       const existing = await pool.query(
-        `SELECT status, opted_in FROM registrations WHERE pass_id = $1`,
-        [req.params.passId.toUpperCase()]
+        `SELECT status, opted_in
+         FROM registrations WHERE pass_id = $1`,
+        [req.params.passId.trim().toUpperCase()]
       );
 
-      const message = !existing.rows.length || !existing.rows[0].opted_in
-        ? "No active registration found for this pass."
-        : "This pass has already been redeemed.";
+      if (!existing.rows.length || !existing.rows[0].opted_in) {
+        return res.status(404).json({
+          success: false,
+          message: "No active registration found for this pass.",
+        });
+      }
 
-      return res.status(existing.rows.length && existing.rows[0].opted_in ? 409 : 404)
-        .json({ success: false, message });
+      return res.status(409).json({
+        success: false,
+        message: "This pass has already been redeemed.",
+      });
     }
 
     res.json({
@@ -161,30 +244,42 @@ app.patch("/api/registrations/:passId/serve", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Could not confirm meal." });
+    res.status(500).json({
+      message: "Could not confirm meal.",
+    });
   }
 });
 
+// Cancel an unserved registration.
 app.delete("/api/registrations/:passId", async (req, res) => {
   try {
     const result = await pool.query(
-      `UPDATE registrations SET opted_in = FALSE
-       WHERE pass_id = $1 AND opted_in = TRUE AND status = 'registered'
+      `UPDATE registrations
+       SET opted_in = FALSE
+       WHERE pass_id = $1
+         AND opted_in = TRUE
+         AND status = 'registered'
        RETURNING id`,
-      [req.params.passId.toUpperCase()]
+      [req.params.passId.trim().toUpperCase()]
     );
 
     if (!result.rows.length) {
       return res.status(409).json({
         success: false,
-        message: "Registration not found, already cancelled, or already served.",
+        message:
+          "Registration not found, already cancelled, or already served.",
       });
     }
 
-    res.json({ success: true, message: "Registration cancelled." });
+    res.json({
+      success: true,
+      message: "Registration cancelled.",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Cancellation failed." });
+    res.status(500).json({
+      message: "Cancellation failed.",
+    });
   }
 });
 
