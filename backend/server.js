@@ -21,7 +21,7 @@ if (!DATABASE_URL || !JWT_SECRET) {
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 10,
+  max: 3,
 });
 
 app.use(express.json({ limit: "10kb" }));
@@ -30,7 +30,16 @@ const origins = (process.env.CORS_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 app.use(cors(origins.length ? { origin: origins } : {}));
-
+let readyPromise;
+const ensureReady = () => (readyPromise ||= initializeDatabase());
+app.use((req, res, next) => {
+  ensureReady()
+    .then(() => next())
+    .catch((error) => {
+      console.error("DB init failed:", error);
+      res.status(500).json({ success: false, message: "Server error." });
+    });
+});
 /* ---------- Meal timings (Asia/Kolkata), minutes after midnight ---------- */
 const MEALS = {
   Breakfast: { start: 7 * 60 + 30, end: 9 * 60 + 30 },
@@ -593,17 +602,15 @@ app.get(
   })
 );
 
-initializeDatabase()
-  .then(() => {
+if (require.main === module) {
+  ensureReady().then(() => {
     app.listen(PORT, () => {
       console.log(`MessMate backend running on port ${PORT}${DEMO_MODE ? " (DEMO_MODE)" : ""}`);
     });
-  })
-  .catch((error) => {
-    console.error("Database initialization failed:", error);
-    process.exit(1);
   });
+}
 
+module.exports = app;
 
   const DEMO_STUDENTS = [
   ["20250001", "Aarav Sharma"], ["20250002", "Ananya Singh"],
