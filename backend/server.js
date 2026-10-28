@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const { Pool } = require("pg");
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 const { DATABASE_URL, JWT_SECRET } = process.env;
 // DEMO_MODE=true skips cutoff and meal-window checks so you can demo at any hour.
@@ -23,6 +24,8 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
   max: 3,
 });
+pool.on("error", (err) => console.error("Pool error:", err.message));
+process.on("unhandledRejection", (e) => console.error("Unhandled:", e));
 
 app.use(express.json({ limit: "10kb" }));
 const origins = (process.env.CORS_ORIGIN || "")
@@ -30,14 +33,16 @@ const origins = (process.env.CORS_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 app.use(cors(origins.length ? { origin: origins } : {}));
+app.get("/ping", (req, res) => res.json({ ok: true }));
 let readyPromise;
 const ensureReady = () => (readyPromise ||= initializeDatabase());
 app.use((req, res, next) => {
   ensureReady()
     .then(() => next())
-    .catch((error) => {
+        .catch((error) => {
       console.error("DB init failed:", error);
-      res.status(500).json({ success: false, message: "Server error." });
+      readyPromise = null; // allow a retry on the next request
+      res.status(500).json({ success: false, message: "Server error.", detail: error.message });
     });
 });
 /* ---------- Meal timings (Asia/Kolkata), minutes after midnight ---------- */
