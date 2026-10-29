@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+app.use(cors({ origin: 'https://mess-test-ifck.vercel.app' }));
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -616,7 +617,9 @@ if (require.main === module) {
 }
 
 module.exports = app;
-
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(3000, () => console.log('Server running on port 3000'));
+}
   const DEMO_STUDENTS = [
   ["20250001", "Aarav Sharma"], ["20250002", "Ananya Singh"],
   ["20250003", "Rohan Gupta"], ["20250004", "Priya Verma"],
