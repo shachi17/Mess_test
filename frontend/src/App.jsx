@@ -4,6 +4,8 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import "../style.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+fetch(`${API_URL}/api/registrations`)
 const STORAGE_KEY = "messmate_auth";
 
 const MEAL_META = {
