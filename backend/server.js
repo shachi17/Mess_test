@@ -1,14 +1,18 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-app.use(cors({ origin: 'https://mess-test-ifck.vercel.app' }));
+const app = express();
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://mess-test-ifck.vercel.app']
+}));
+app.use(express.json());
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const { Pool } = require("pg");
 
-const app = express();
+
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 const { DATABASE_URL, JWT_SECRET } = process.env;

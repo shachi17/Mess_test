@@ -238,7 +238,7 @@ function StudentPortal({ api, notify }) {
         </div>
       </div>
 
-      {config.demoMode && <p className="notice demo-note">Demo mode: scanning works at any hour.</p>}
+  
 
       {config.meals.map((meal) => {
         const record = records.find((r) => r.meal === meal.name && r.mealDate === date);
